@@ -1,0 +1,29 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AI Email OS logo">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="sparkGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="100%" stop-color="#FBBF24"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background tile -->
+  <rect width="64" height="64" rx="14" fill="url(#bgGrad)"/>
+
+  <!-- Envelope body -->
+  <rect x="10" y="18" width="34" height="26" rx="4" fill="#FFFFFF" fill-opacity="0.96"/>
+
+  <!-- Envelope flap -->
+  <path d="M10 21 L27 33 L44 21" stroke="#4F46E5" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Envelope bottom edge accent -->
+  <path d="M10 42 L21 31" stroke="#C7D2FE" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M44 42 L33 31" stroke="#C7D2FE" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- AI spark badge -->
+  <circle cx="47" cy="41" r="13" fill="#111827"/>
+  <path d="M47 33 L49.3 39 L55.5 41 L49.3 43 L47 49 L44.7 43 L38.5 41 L44.7 39 Z" fill="url(#sparkGrad)"/>
+</svg>
