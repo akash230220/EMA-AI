@@ -1,0 +1,61 @@
+# ==============================================================================
+# AI Email Operating System — Backend Python Dependencies
+# ==============================================================================
+
+# Core Framework & ASGI Server
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.28.0,<1.0.0
+starlette>=0.36.0,<1.0.0
+python-multipart>=0.0.9
+
+# Data Validation & Configuration
+pydantic>=2.6.0,<3.0.0
+pydantic-settings>=2.2.0,<3.0.0
+email-validator>=2.1.0
+
+# Database & Document Storage (MongoDB)
+motor>=3.3.2,<4.0.0
+pymongo>=4.6.2,<5.0.0
+
+# Vector Database & Embeddings
+chromadb>=0.4.24
+
+# Authentication, Security & Cryptography
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.2
+
+# HTTP Clients & Network
+httpx>=0.27.0
+requests>=2.31.0
+
+# Google APIs & OAuth Integrations
+google-auth>=2.28.0
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.120.0
+
+# AI, LLM & Multi-Agent Framework
+google-generativeai>=0.4.0
+google-genai>=0.1.1
+langgraph>=0.0.26
+langchain>=0.1.10
+langchain-core>=0.1.28
+langchain-google-genai>=0.0.9
+
+# Background Tasks & Recurring Cron Scheduler
+apscheduler>=3.10.4
+
+# Utilities & Environment
+python-dotenv>=1.0.1
+pyyaml>=6.0.1
+tzdata>=2024.1
+
+# Testing & Development
+pytest>=8.0.0
+pytest-asyncio>=0.23.5
+pytest-mock>=3.12.0
+pytest-env>=1.1.3
+anyio>=4.3.0
+coverage>=7.4.3
+
