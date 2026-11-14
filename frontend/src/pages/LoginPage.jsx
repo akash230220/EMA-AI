@@ -27,6 +27,7 @@ export default function LoginPage() {
   const exchangeStartedRef = React.useRef(false);
 
   const code = searchParams.get("code");
+  const state = searchParams.get("state");
   const oauthError = searchParams.get("error");
 
   React.useEffect(() => {
@@ -35,13 +36,17 @@ export default function LoginPage() {
       return;
     }
     if (!code) return;
+    if (!state) {
+      setError("The sign-in session could not be verified. Please try again.");
+      return;
+    }
     if (exchangeStartedRef.current) return;
 
     exchangeStartedRef.current = true;
 
     setIsExchanging(true);
     authApi
-      .exchangeCodeForToken(code)
+      .exchangeCodeForToken(code, state)
       .then((data) => {
         setUser(data.user);
         window.location.replace("/dashboard");
@@ -50,7 +55,7 @@ export default function LoginPage() {
         setError("Something went wrong signing you in. Please try again.");
         setIsExchanging(false);
       });
-  }, [code, oauthError, setUser]);
+  }, [code, state, oauthError, setUser]);
 
   if (isExchanging) {
     return (
