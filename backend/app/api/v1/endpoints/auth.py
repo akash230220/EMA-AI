@@ -34,6 +34,16 @@ OAUTH_STATE_COOKIE_NAME = "oauth_state"
 OAUTH_STATE_MAX_AGE_SECONDS = 600
 
 
+def _clear_oauth_state_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=OAUTH_STATE_COOKIE_NAME,
+        path="/api/v1/auth",
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+    )
+
+
 @router.get("/google/login")
 async def google_login():
     """Starts a browser-bound Google OAuth flow with CSRF protection."""
@@ -59,7 +69,7 @@ async def google_callback_redirect(
     state: str | None = Query(None),
     error: str | None = Query(None),
 ):
-    """Validates OAuth CSRF state before forwarding the code to the frontend."""
+    """Validates OAuth state before forwarding the result to the frontend."""
     expected_state = request.cookies.get(OAUTH_STATE_COOKIE_NAME)
     if (
         not state
@@ -69,37 +79,44 @@ async def google_callback_redirect(
     ):
         raise AppException(status_code=400, detail="Invalid or expired OAuth state. Please try signing in again.")
 
-    params = {}
+    params = {"state": state}
     if code:
         params["code"] = code
     if error:
         params["error"] = error
 
-    frontend_callback = f"{settings.FRONTEND_BASE_URL}/login"
-    if params:
-        frontend_callback = f"{frontend_callback}?{urlencode(params)}"
-
+    frontend_callback = f"{settings.FRONTEND_BASE_URL}/login?{urlencode(params)}"
     response = RedirectResponse(url=frontend_callback)
-    response.delete_cookie(
-        key=OAUTH_STATE_COOKIE_NAME,
-        path="/api/v1/auth",
-        httponly=True,
-        secure=settings.is_production,
-        samesite="lax",
-    )
+
+    # On a denied/cancelled authorization there will be no token exchange
+    # to consume the state, so clear the short-lived cookie here.
+    if error or not code:
+        _clear_oauth_state_cookie(response)
+
     return response
 
 
 @router.post("/google/callback", response_model=AccessTokenResponse)
-async def google_callback(payload: TokenExchangeRequest, response: Response):
+async def google_callback(
+    payload: TokenExchangeRequest,
+    request: Request,
+    response: Response,
+):
     """
-    Exchanges an authorization code (from Google's redirect) for a
-    session: creates/updates the user record, issues access + refresh
-    tokens, sets the refresh token as an httpOnly secure cookie, and
-    returns the access token + user profile to the frontend.
+    Exchanges a Google authorization code only when its state matches
+    the short-lived, HttpOnly state cookie established at login.
     """
+    expected_state = request.cookies.get(OAUTH_STATE_COOKIE_NAME)
+    if (
+        not expected_state
+        or not hmac.compare_digest(payload.state, expected_state)
+        or not verify_oauth_state(payload.state)
+    ):
+        raise AppException(status_code=400, detail="Invalid or expired OAuth state. Please sign in again.")
+
     access_token, refresh_token, user = await exchange_code_for_session(payload.code)
 
+    _clear_oauth_state_cookie(response)
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
