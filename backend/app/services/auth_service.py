@@ -26,6 +26,7 @@ from typing import Optional, Tuple
 
 from jose import JWTError
 
+from app.auth.oauth_handler import generate_oauth_state
 from app.core.config import get_settings
 from app.core.security import (
     TOKEN_TYPE_REFRESH,
@@ -93,15 +94,15 @@ async def _issue_session(user: UserModel) -> Tuple[str, str]:
 # Public API consumed by endpoints/auth.py
 # ---------------------------------------------------------------------------
 
-def build_google_auth_url() -> str:
+def build_google_auth_url(state: str | None = None) -> str:
     """
     Constructs the Google OAuth 2.0 authorization URL for the consent
-    screen redirect. Includes offline access (for refresh_token) and
-    forces account selection so users can switch accounts.
+    screen redirect. The caller supplies a signed, browser-bound CSRF state.
     """
     return build_authorization_url(
         scopes=settings.GOOGLE_OAUTH_SCOPES,
         redirect_uri=settings.GOOGLE_OAUTH_REDIRECT_URI,
+        state=state,
     )
 
 
@@ -277,4 +278,3 @@ async def dev_login(
 
     access_token, refresh_token = await _issue_session(user)
     return access_token, refresh_token, _user_to_response(user)
-

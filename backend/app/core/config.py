@@ -13,7 +13,7 @@ and every service module import via get_settings().
 from functools import lru_cache
 from typing import List
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -133,6 +133,21 @@ class Settings(BaseSettings):
         if v not in allowed:
             raise ValueError(f"ENVIRONMENT must be one of {allowed}, got '{v}'")
         return v
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self):
+        """Fail fast when production is configured with a known or weak JWT secret."""
+        if self.is_production:
+            secret = self.JWT_SECRET_KEY.strip()
+            if (
+                len(secret) < 32
+                or secret.upper() in {"CHANGE_ME_IN_PRODUCTION", "SECRET", "YOUR_SECRET_KEY"}
+                or "CHANGE_ME" in secret.upper()
+            ):
+                raise ValueError(
+                    "JWT_SECRET_KEY must be a unique random value of at least 32 characters in production."
+                )
+        return self
 
     @property
     def is_production(self) -> bool:
