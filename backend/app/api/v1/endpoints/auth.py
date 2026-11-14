@@ -4,6 +4,9 @@ Auth endpoints — Google OAuth 2.0 login flow, session bootstrap,
 token refresh, logout. Maps 1:1 to frontend/src/api/authApi.js.
 """
 
+import hmac
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
@@ -17,27 +20,55 @@ from app.services.auth_service import (
 )
 from app.exceptions.custom_exceptions import AppException
 from app.auth.jwt_handler import get_current_user
+from app.auth.oauth_handler import (
+    generate_oauth_state,
+    verify_oauth_state,
+)
 from app.core.config import get_settings
 
 router = APIRouter()
 settings = get_settings()
 
 REFRESH_COOKIE_NAME = "refresh_token"
+OAUTH_STATE_COOKIE_NAME = "oauth_state"
+OAUTH_STATE_MAX_AGE_SECONDS = 600
 
 
 @router.get("/google/login")
 async def google_login():
-    """Redirects the browser to Google's OAuth consent screen."""
-    auth_url = build_google_auth_url()
-    return RedirectResponse(url=auth_url)
+    """Starts a browser-bound Google OAuth flow with CSRF protection."""
+    state = generate_oauth_state()
+    auth_url = build_google_auth_url(state=state)
+    response = RedirectResponse(url=auth_url)
+    response.set_cookie(
+        key=OAUTH_STATE_COOKIE_NAME,
+        value=state,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+        max_age=OAUTH_STATE_MAX_AGE_SECONDS,
+        path="/api/v1/auth",
+    )
+    return response
 
 
 @router.get("/google/callback")
 async def google_callback_redirect(
+    request: Request,
     code: str | None = Query(None),
+    state: str | None = Query(None),
     error: str | None = Query(None),
 ):
-    """Forwards Google's browser redirect to the frontend callback page."""
+    """Validates OAuth CSRF state before forwarding the code to the frontend."""
+    expected_state = request.cookies.get(OAUTH_STATE_COOKIE_NAME)
+    if (
+        not state
+        or not expected_state
+        or not hmac.compare_digest(state, expected_state)
+        or not verify_oauth_state(state)
+    ):
+        raise AppException(status_code=400, detail="Invalid or expired OAuth state. Please try signing in again.")
+
     params = {}
     if code:
         params["code"] = code
@@ -46,10 +77,17 @@ async def google_callback_redirect(
 
     frontend_callback = f"{settings.FRONTEND_BASE_URL}/login"
     if params:
-        from urllib.parse import urlencode
-
         frontend_callback = f"{frontend_callback}?{urlencode(params)}"
-    return RedirectResponse(url=frontend_callback)
+
+    response = RedirectResponse(url=frontend_callback)
+    response.delete_cookie(
+        key=OAUTH_STATE_COOKIE_NAME,
+        path="/api/v1/auth",
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+    )
+    return response
 
 
 @router.post("/google/callback", response_model=AccessTokenResponse)
