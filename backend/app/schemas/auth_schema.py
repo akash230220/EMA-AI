@@ -9,6 +9,7 @@ from app.schemas.common_schema import CamelModel
 
 class TokenExchangeRequest(CamelModel):
     code: str
+    state: str
 
 
 class UserResponse(CamelModel):
